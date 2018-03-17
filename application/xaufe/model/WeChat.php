@@ -3,7 +3,7 @@ namespace app\xaufe\model;
 
 use think\Model;
 
-class StuLibMesg extends Model
+class WeChat extends Model
 {
 
 }

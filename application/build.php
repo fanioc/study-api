@@ -24,7 +24,7 @@ return [
         '__file__'   => ['common.php'],
         '__dir__'    => ['behavior', 'controller', 'model', 'view'],
         'controller' => ['Index', 'EduSysWeb', 'EduSysMobile','Library','WeChat'],
-        'model'      => ['StuInfo', 'StuClass','FreeClass','StuGrade','StuLibMesg'],
+        'model'      => ['EduSysWeb', 'EduSysMobile','Library','WeChat'],
         'view'       => ['index/index'],
     ]
     // 其他更多的模块定义
