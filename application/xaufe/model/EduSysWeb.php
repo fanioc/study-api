@@ -44,22 +44,22 @@ class EduSysWeb extends Model
 		else return 'error:' . $r_code;
 	}
 	
-	public function getInfo()
+	public function getInfo($xh,$cookies)
 	{
 	
 	}
 	
-	public function getTimetable()
+	public function getCourse($xh,$cookies)
 	{
 	
 	}
 	
-	public function getFreeTimetable()
+	public function getFreeClass($xh,$cookies)
 	{
 	
 	}
 	
-	public function getScore()
+	public function getScore($xh,$cookies)
 	{
 	
 	}

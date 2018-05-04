@@ -8,7 +8,7 @@ use think\Controller;
 class EduSysWeb extends Controller
 {
 	protected $beforeActionList = [
-	//		'check'
+//			'check'
 	];
 	
 	protected function check()
@@ -19,24 +19,28 @@ class EduSysWeb extends Controller
 		}
 	}
 	
-	function index()
+	protected function formatData($code=0,$data)
 	{
-		return "hello";
+		return ['code'=>$code,'data'=>$data];
+	}
+	
+	function index($dfa,$dd)
+	{
+		return $dfa.$dd;
 	}
 	
 	function getCheckCode()
 	{
 		$model = new EduSysWebModel;
 		$check_code = $model->getCheckCode();
-		echo "<img src=\"".$check_code['image']."\" />";
-		return $check_code['cookies'];
+//		echo "<img src=\"".$check_code['image']."\" />";
+		return $this->formatData(2,$check_code);
 	}
 	
-	function loginSys()
+	function loginSys($xh,$psw,$checkCode,$cookies)
 	{
 		$model = new EduSysWebModel;
-		$out = $model->login($this->request->param('xh'),$this->request->param('psw'),$this->request->param('code'),$this->request->param('cookie'));
-		
+		$out = $model->login($xh,$psw,$checkCode,$cookies);
 		return $out;
 	}
 	
