@@ -24,12 +24,12 @@ class EduSysWeb extends Controller
 		return ['code'=>$code,'data'=>$data];
 	}
 	
-	function index($dfa,$dd)
+	public function index()
 	{
-		return $dfa.$dd;
+		$this->error('sadfa');
 	}
 	
-	function getCheckCode()
+	public function getCheckCode()
 	{
 		$model = new EduSysWebModel;
 		$check_code = $model->getCheckCode();
@@ -37,29 +37,31 @@ class EduSysWeb extends Controller
 		return $this->formatData(2,$check_code);
 	}
 	
-	function loginSys($xh,$psw,$checkCode,$cookies)
+	public function loginSys($xh,$psw,$checkCode,$cookies)
 	{
 		$model = new EduSysWebModel;
 		$out = $model->login($xh,$psw,$checkCode,$cookies);
-		return $out;
+//		echo $out;
+		$course = $model->getCourse();
+		return $course;
 	}
 	
-	function getInfo()
+	public function getInfo()
 	{
 	
 	}
 	
-	function getCourse()
+	public function getCourse()
 	{
 	
 	}
 	
-	function getFreeCourse()
+	public function getFreeCourse()
 	{
 	
 	}
 	
-	function getScore()
+	public function getScore()
 	{
 	
 	}
