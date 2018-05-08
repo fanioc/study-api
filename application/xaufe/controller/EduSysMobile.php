@@ -8,7 +8,7 @@ use think\Controller;
 class EduSysMobile extends Controller
 {
 	protected $beforeActionList = [ //前置操作
-		'check' //检查api接口是否可以访问
+//		'check' //检查api接口是否可以访问
 	];
 	
 	protected function check() //检查api接口是否可以访问
@@ -21,29 +21,33 @@ class EduSysMobile extends Controller
 		return "hello";
 	}
 	
-	function loginSys()
+	function loginSys($xh,$psw)
+	{
+//		$model = new EduSysMobileModel;
+	}
+	
+	function getInfo($xh)
 	{
 		$model = new EduSysMobileModel;
+		return $model->getInfo($xh);
 	}
 	
-	function getInfo()
+	function getCourse($xh)
 	{
-		
+		$model = new EduSysMobileModel;
+		return $model->getCourse($xh);
 	}
 	
-	function getCourse()
+	function getScore($xh)
 	{
-		
+		$model = new EduSysMobileModel;
+		return $model->getScore($xh);
 	}
 	
-	function getFreeCourse()
+	function getExam($xh)
 	{
-		
-	}
-	
-	function getScore()
-	{
-		
+		$model = new EduSysMobileModel;
+		return $model->getExam($xh);
 	}
 	
 }

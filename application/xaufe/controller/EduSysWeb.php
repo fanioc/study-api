@@ -11,7 +11,7 @@ class EduSysWeb extends Controller
 //			'check'
 	];
 	
-	protected function check()
+	protected function check()  //前置校验操作
 	{
 		if ($this->request->param('time') != '10'){
 			echo "404";
@@ -26,7 +26,7 @@ class EduSysWeb extends Controller
 	
 	public function index()
 	{
-		$this->error('sadfa');
+//		$this->error('sadfa');
 	}
 	
 	public function getCheckCode()
@@ -46,14 +46,18 @@ class EduSysWeb extends Controller
 		return $course;
 	}
 	
+	
+	
 	public function getInfo()
 	{
 	
 	}
 	
-	public function getCourse()
+	public function getCourse($xh,$cookies)
 	{
-	
+		$model = new EduSysWebModel;
+		$course = $model->getCourse($xh,$cookies);
+		return $course;
 	}
 	
 	public function getFreeCourse()
@@ -62,6 +66,11 @@ class EduSysWeb extends Controller
 	}
 	
 	public function getScore()
+	{
+	
+	}
+	
+	function getExam($xh)
 	{
 	
 	}
