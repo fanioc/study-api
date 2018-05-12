@@ -6,4 +6,5 @@ use think\Model;
 class StudyApp extends Model
 {
 
+	
 }
