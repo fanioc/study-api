@@ -24,5 +24,10 @@ return [
 		'info' => "XS0208"],
 	'EduSysMobil_url_procode' => "002",
 	'EduSysMobil_url_type' => "1",
-
+	
+	'StudyApp_appid'=>'wxc0de6bf6a226167f',
+	'StudyApp_secret'=>'826b71cfc1dfc778e67d74ade781e65a',
+	'StudyApp_sessionkey_url'=>'https://api.weixin.qq.com/sns/jscode2session?grant_type=authorization_code',//appid=APPID&secret=SECRET&js_code=JSCODE
+	
+	
 ];
