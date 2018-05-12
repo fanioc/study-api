@@ -23,8 +23,8 @@ return [
     ],'xaufe'     => [
         '__file__'   => ['common.php'],
         '__dir__'    => ['behavior', 'controller', 'model', 'view'],
-        'controller' => ['Index', 'EduSysWeb', 'EduSysMobile','Library','WeChat'],
-        'model'      => ['EduSysWeb', 'EduSysMobile','Library','WeChat'],
+        'controller' => ['Index', 'EduSysWeb', 'EduSysMobile','Library','WeChat','StudyApp','EduSys'],
+        'model'      => ['EduSysWeb', 'EduSysMobile','Library','WeChat','StudyApp','EduSys'],
         'view'       => ['index/index'],
     ]
     // 其他更多的模块定义
