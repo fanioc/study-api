@@ -4,7 +4,6 @@ namespace app\xaufe\model;
 
 use org\util\Curl;
 use think\Model;
-//use QL\QueryList;
 
 class EduSysWeb extends Model
 {
@@ -18,12 +17,13 @@ class EduSysWeb extends Model
 	 */
 	private function getViewState($html)
 	{
-		preg_match_all('/<input type="hidden" name="(.*?)" value="(.*?)">/i', $html, $result);
+		preg_match_all('#<input type="hidden" name="(.*?)" value="(.*?)" />#i', $html, $result);
 		
 		$view_state = [];
 		foreach ($result[1] as $key => $name) {
 			$view_state[$name] = $result[2][$key];
 		}
+		
 		return $view_state;
 	}
 	
@@ -34,7 +34,6 @@ class EduSysWeb extends Model
 	private function transCourse($html)
 	{
 		preg_match_all('/<td align="Center" rowspan="\d".*?>(.*?)<\/td>/i', $html, $courses);
-		print_r($courses);
 		
 		$format_course = array();
 		foreach ($courses[1] as $course) {
@@ -104,7 +103,7 @@ class EduSysWeb extends Model
 		$image = Curl::get($check_code_url, null, $r_cookies, $r_code);
 		if ($r_code == '200')
 			return ['image' => 'data:image/gif;base64,' . base64_encode($image), 'cookies' => $r_cookies];
-		else return 'error:' . $r_code;
+		else return ['error' => $r_code];
 	}
 	
 	/**
@@ -130,7 +129,7 @@ class EduSysWeb extends Model
 			
 		} else {
 			preg_match('/defer>alert\(\'(.*)\'\);document/i', $output, $error); //获取错误信息
-			return $error[1];
+			return ['error' => $error[1]];
 		}
 	}
 	
@@ -199,29 +198,23 @@ class EduSysWeb extends Model
 	/**
 	 * @param null $xh
 	 * @param null $cookies
+	 * @param $day
+	 * @return array
 	 */
-	public function getFreeClass($xh = null, $cookies = null)
+	public function getFreeClassDay($xh = null, $cookies = null, $day)
 	{
 		if ($xh != null)
 			$this->xh = $xh;
 		if ($cookies != null)
 			$this->cookies = $cookies;
 		
-		$day = '2018-05-12';
-		$this->getFreeClassDay($day);
-	}
-	
-	/**
-	 * @param $day
-	 * @return array
-	 */
-	private function getFreeClassDay($day)
-	{
-		$url = config('EduSysWeb_url') . '/xxjsjy.aspx?xh=' . $this->xh . '&xm=%B3%C2%BE%B8&gnmkdm=N121611';
+		$url = config('EduSysWeb_url') . '/xxjsjy.aspx?xh=' . $this->xh . '&gnmkdm=N121611';
 		$header = ['Referer: ' . config('EduSysWeb_url') . '/xs_main.aspx?xh=' . $this->xh];
 		
 		$html = Curl::get($url, $this->cookies, $r_cookes, $r_code, $header);
 		$view1 = $this->getViewState($html);
+//		print_r($html);
+		
 		$sjds = array(
 			"'1'|'1','0','0','0','0','0','0','0','0'",
 			"'2'|'0','3','0','0','0','0','0','0','0'",
@@ -243,7 +236,7 @@ class EduSysWeb extends Model
 		$header = ['Referer:' . $url];
 		
 		$free_class = [];
-		//循环每天时间段的数据
+		//循环每时间段的数据
 		foreach ($sjds as $sjd_key => $sjd) {
 			$post_data = [
 				'__EVENTTARGET' => $view1['__EVENTTARGET'],
@@ -290,18 +283,37 @@ class EduSysWeb extends Model
 				
 				preg_match_all('#<td>(\d{3,})</td><td>(.*?教学楼)(.*?)</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td>#i', $html, $lbs);
 				
-				foreach ($lbs[0] as $index => $item) {
+				/**
+				 * 合并教室号
+				 */
+				foreach ($lbs[2] as $index => $Name) {
+					$jxl[$Name][] = $lbs[3][$index];
+					$xq[$Name] = $lbs[5][$index];
+				}
+				
+				/**
+				 * 以教学楼名称为键值
+				 */
+				foreach ($jxl as $jxlName => $jsh) {
 					$free_class[$sjd_key][] = [
-						'教室编号' => $lbs[1][$index],
-						'教学楼' => $lbs[2][$index],
-						'教室号' => $lbs[3][$index],
-						'教室类别' => $lbs[4][$index],
-						'校区' => $lbs[5][$index],
-						'座位数' => $lbs[6][$index],];
+//						'教室编号' => $lbs[1][$index],
+						'教学楼' => $jxlName,
+						'教室号' => $jsh,
+//						'教室类别' => $lbs[4][$index],
+						'校区' => $xq[$jxlName]
+//						'座位数' => $lbs[6][$index]
+					];
 				}
 			}
 			//页数循环结束
 		}
+		
+		/**
+		 * array(1=>[['教学楼'=>1号教学楼,'教室号'=>...,'校区'=>...],],2=>['教学楼'=>2号教学楼,'教室号'=>...,'校区'=>...]...)
+		 */
+
+//		print_r($free_class);
+		
 		return $free_class;
 	}
 	
