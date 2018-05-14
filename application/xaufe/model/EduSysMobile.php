@@ -3,12 +3,12 @@
 namespace app\xaufe\model;
 
 use think\Model;
-use QL\QueryList;
 use org\util\Curl;
 
 class EduSysMobile extends Model
 {
-	private $cookies;
+	public $cookies;
+	public $xh;
 	
 	private function getUrl($choice, $xh)
 	{
@@ -23,13 +23,15 @@ class EduSysMobile extends Model
 		return $url;
 	}
 	
-	private function getCookies($xh)
+	public function getCookies($xh)
 	{
-		$course_url = $this->getUrl('info', $xh);
+		$this->xh = $xh;
+		
+		$course_url = $this->getUrl('info', $this->xh);
 		
 		Curl::get($course_url, null, $r_cookies, $r_code, null, $r_header);
 		
-		print_r($this->cookies);
+//		print_r($this->cookies);
 		
 		if ($r_code == '302' && strpos($r_header, 'Location: /XSXX/xsjbxx.aspx')) {
 			
@@ -44,13 +46,16 @@ class EduSysMobile extends Model
 	
 	function login($xh, $psw)
 	{
-	
+		//TODO::无验证码登入
 	}
 	
 	function transCousrse($html)
 	{
 		preg_match_all("<a href='(.*?)'>", $html, $cou_urls);
 		$cou_url = array_unique($cou_urls[1]);
+		
+		preg_match('#selected="selected" value="(.*?)"#i', $html, $match);
+		$xnxq = explode('@', $match[1]);
 		
 		$format_course = [];
 		foreach ($cou_url as $url) {
@@ -114,7 +119,9 @@ class EduSysMobile extends Model
 					$location = $locations[$key];
 				
 				$format_course[] = [
-					"className" => $className,
+					"xn" => $xnxq[0],
+					"xq" => $xnxq[1],
+					"class_name" => $className,
 					"time" => $time,
 					"week" => $week,
 					"teacher" => $teacher,
@@ -129,16 +136,16 @@ class EduSysMobile extends Model
 	function transScore($html)
 	{
 		$re_info = array(
-			'课程名' => 'class=\'fl\'>',
-			'学分' => '学分：',
-			'学年学期' => '学年学期：',
-			'课程代码' => '课程代码：',
-			'成绩' => '成绩：',
-			'补考成绩' => '补考成绩：',
-			'辅修标记' => '辅修标记：',
-			'重修标记' => '重修标记：',
-			'课程性质' => '课程性质：',
-			'开课学院' => '开课学院：'
+			'course' => 'class=\'fl\'>',
+			'credit' => '学分：',
+			'xq' => '学年学期：',
+			'course_code' => '课程代码：',
+			'score' => '成绩：',
+			'bk_score' => '补考成绩：',
+			'fx_mark' => '辅修标记：',
+			'cx_mark' => '重修标记：',
+			'quality' => '课程性质：',
+			'college_name' => '开课学院：'
 		);
 		
 		preg_match_all("#<li>(.*?)</li>#i", $html, $subs);
@@ -146,29 +153,38 @@ class EduSysMobile extends Model
 		foreach ($subs[1] as $id => $sub) {
 			foreach ($re_info as $key => $re) {
 				preg_match("#$re(.*?)(\) )?<#i", $sub, $sub_info);
+				
+				if ($key == 'xq'){
+					$xnxq = explode('-',$sub_info[1]);
+					$subjects[$id]['xn'] = $xnxq[0].'-'.$xnxq[1];
+					$subjects[$id]['xq'] = $xnxq[2];
+					continue;
+				}
+				
 				$subjects[$id][$key] = $sub_info[1];
 			}
 		}
+		
 		return $subjects;
 	}
 	
 	function transInfo($html)
 	{
 		$re_info = array(
-			"姓名" => 'labxm',
-			"性别" => 'labxb',
-			"年级" => 'labdqszj',
-			"出生日期" => 'labcsrq',
-			"入学日期" => 'labrxrq',
-			"来源省" => 'lablys',
-			"民族" => 'labmz',
-			"专业" => 'labzy',
-			"行政班" => 'labxzb',
-			"学历层次" => 'labcc',
-			"学制" => 'labxz',
-			"学院" => 'labxy',
-			"身份证号" => 'labsfzh',
-			"家庭住址" => 'lbjtszd'
+			"name" => 'labxm',
+			"sex" => 'labxb',
+			"grade" => 'labdqszj',
+			"birthday" => 'labcsrq',
+			"school_date" => 'labrxrq',
+			"province" => 'lablys',
+			"nation" => 'labmz',
+			"major" => 'labzy',
+			"class_name" => 'labxzb',
+			"education" => 'labcc',
+			"school_year" => 'labxz',
+			"college_name" => 'labxy',
+			"ID_number" => 'labsfzh',
+			"address" => 'lbjtszd'
 		);
 		$stu_info = [];
 		foreach ($re_info as $id => $re) {
@@ -183,9 +199,24 @@ class EduSysMobile extends Model
 	
 	}
 	
-	
-	function getCourse($xh)
+	private function checkCookies($xh, $cookies)
 	{
+		if ($xh != null)
+			$this->xh = $xh;
+		if ($cookies != null) {
+			$this->cookies = $cookies;
+			return true;
+		}
+		if (empty($this->cookies))
+			return $this->getCookies($xh);
+		else return true;
+	}
+	
+	public function getCourse($xh, $cookies = null, $xnxq = null)
+	{
+		$this->checkCookies($xh, $cookies);
+		
+		//TODO::对不同学期进行操作
 //		echo $this->getUrl('course',$xh);
 		if ($this->getCookies($xh)) {
 			$location_url = config('EduSysMobile_url') . "/KBCXGL/xskcbcx.aspx";
@@ -194,36 +225,35 @@ class EduSysMobile extends Model
 		} else return false;
 	}
 	
-	public function getScore($xh)
+	public function getScore($xh, $cookies = null, $xnxq = null)
 	{
-
-		if ($this->getCookies($xh)) {
+		//TODO::对不同学期进行操作
+		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/XSCJCX/xsdqcjcx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
 			return $this->transScore($html);
 		} else return false;
 	}
 	
-	public function getInfo($xh)
+	public function getInfo($xh, $cookies = null)
 	{
-
-		if ($this->getCookies($xh)) {
+		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/XSXX/xsjbxx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
-			$this->transInfo($html);
+			$info = $this->transInfo($html);
+			return $info;
 		} else return false;
 	}
 	
-	
-	function getExam($xh)
+	public function getExam($xh, $cookies = null)
 	{
-		echo $this->getUrl('exam', $xh);
-		if ($this->getCookies($xh)) {
+		//TODO::解析exam
+		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/KSCXGL/xskscx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
 			print_r($html);
+			return true;
 		} else return false;
 	}
-	
 	
 }

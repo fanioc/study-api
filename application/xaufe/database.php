@@ -15,7 +15,7 @@ return [
 	// 服务器地址
 	'hostname'        => '127.0.0.1',
 	// 数据库名
-	'database'        => '',
+	'database'        => 'xaufe',
 	// 用户名
 	'username'        => 'root',
 	// 密码
@@ -27,7 +27,12 @@ return [
 	// 数据库编码默认采用utf8
 	'charset'         => 'utf8',
 	// 数据库表前缀
-	'prefix'          => 'xaufe_',
+	'prefix'          => '',
 	// 数据库调试模式
 	'debug'           => true,
+	
+	// 是否严格检查字段是否存在
+	'fields_strict'   => false,
+	// 数据集返回类型（重要，可以对结果集使用toArray() ）
+	'resultset_type'  => '\think\Collection',
 ];
