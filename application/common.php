@@ -26,3 +26,9 @@ function getSubstr($str, $leftStr, $rightStr)
 	if ($left < 0 or $right < $left) return '';
 	return substr($str, $left + strlen($leftStr), $right - $left - strlen($leftStr));
 }
+
+function getCurrentTime($format=null){
+	if ($format==null)
+		$format='Y-m-d H:i:s';
+	return date($format,time());
+}

@@ -14,6 +14,7 @@ class EduSysMobile extends Controller
 	
 	function loginSys($xh,$psw)
 	{
+		return EduSysMobileModel::login($xh ,$psw);
 //		$model = new EduSysMobileModel;
 	}
 	
