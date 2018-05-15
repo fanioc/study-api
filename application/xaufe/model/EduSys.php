@@ -10,13 +10,17 @@ use think\Model;
 class EduSys extends Model
 {
 	protected $connection = [
-		// 数据库编码默认采用utf8
-		'charset' => 'utf8',
 		// 数据库表前缀
 		'prefix' => 'edusys_',
 	];
 	
-	public function loginWeb($xh, $pwd, $checkCode, $cookies)
+	static function loginMobile($xh, $pwd){
+		if(EduSysMobile::login($xh,$pwd))
+			return true;
+		else return false;
+	}
+	
+	static function loginWeb($xh, $pwd, $checkCode, $cookies)
 	{
 		$web = new EduSysWeb();
 		$re_data = $web->login($xh, $pwd, $checkCode, $cookies);
@@ -56,8 +60,7 @@ class EduSys extends Model
 			$tt = $current_t - $xq2_star;
 			$current_week = (int)($tt / 60 / 60 / 24 / 7) + 1;
 		}
-
-//		print_r($tt / 60 / 60 / 24 / 7);
+		
 		return ['xn' => $current_xn, 'xq' => $current_xq, 'week' => $current_week];
 	}
 	
@@ -72,15 +75,15 @@ class EduSys extends Model
 	}
 	
 	/**
-	 * @param null $dates
-	 * @return false|\PDOStatement|string|\think\Collection
+	 * @param null $date
+	 * @return array
 	 * @throws \think\db\exception\DataNotFoundException
 	 * @throws \think\db\exception\ModelNotFoundException
 	 * @throws \think\exception\DbException+
 	 */
-	public function getFreeClass($dates = null)
+	public function getFreeClass($date = null)
 	{
-		$re_data = $this->name('freeclass')->where('date', '=', $dates)->select();
+		$re_data = $this->name('freeclass')->where('date', '=', $date)->select()->toArray();
 		//TODO::处理异常问题
 		return $re_data;
 	}
@@ -89,7 +92,6 @@ class EduSys extends Model
 	 * 更新数据库中未来2周的空课表（将会花费大量时间，平均更新一天30s,大约7分钟）
 	 * @param $cookies
 	 * @param $xh
-	 * //     * @return int|string
 	 */
 	public function updateFreeClass($cookies, $xh)
 	{
@@ -112,7 +114,7 @@ class EduSys extends Model
 						'jxl' => $class['教学楼'],
 						'xq' => $class['校区'],
 						'jsh' => json_encode($class['教室号'], JSON_UNESCAPED_SLASHES),
-						'update_time' => date('Y-m-d H:i:s', time())];
+						'update_time' => getCurrentTime()];
 				}
 			}
 			
@@ -123,36 +125,60 @@ class EduSys extends Model
 	}
 	
 	/**
-	 * 从数据库中获得学生学期课表，如果是第一次查询则自动更新，后续则需手动更新
 	 * @param $xh
-	 * @param $term
+	 * @param $xn
+	 * @param $xq
+	 * @return array
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
 	 */
-	public function getCourse($xh, $term)
+	public function getCourse($xh, $xn, $xq)
 	{
-//		$this->
+		$course = $this->name('stu_course')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select()->toArray();
+		if (empty($course))
+			return ['errCode' => 43]; //数据库内无课表数据，请尝试更新课表
+		return $course;
 	}
 	
 	/**
-	 * 从数据库中获得学生信息，如果是第一次查询则自动更新，后续则需手动更新
 	 * @param $xh
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
 	 */
 	public function getInfo($xh)
 	{
-	
+		$info = $this->name('stu_info')->where('xh', '=', $xh)->find()->toArray();
+		if (empty($info))
+			return ['errCode' => 42]; //数据库内无用户信息，请尝试更新
+		return $info;
 	}
 	
-	
 	/**
-	 * 从数据库中获得学生学期成绩，如果是第一次查询则自动更新，后续则需手动更新
 	 * @param $xh
+	 * @param $xn
+	 * @param $xq
+	 * @return array
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
 	 */
-	public function getScore($xh)
+	public function getScore($xh, $xn, $xq)
 	{
-	
+		$score = $this->name('stu_score')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select()->toArray();
+		
+		if (empty($score))
+			return ['errCode' => 41]; //数据库内无用户信息，请尝试更新
+		return $score;
 	}
 	
 	/**
 	 * 更新数据库中有关该学号的所有信息
+	 * @param $xh
+	 * @return bool
 	 */
 	public function updateAll($xh)
 	{
@@ -162,20 +188,20 @@ class EduSys extends Model
 		$stu_info['xh'] = $xh;
 		
 		$stu_course = $mobile->getCourse($xh);
-		foreach ($stu_course as &$item){
+		foreach ($stu_course as &$item) {
 			$item['time'] = json_encode($item['time'], JSON_UNESCAPED_SLASHES);
 			$item['week'] = json_encode($item['week'], JSON_UNESCAPED_SLASHES);
-			$item['xh']=$xh;
+			$item['xh'] = $xh;
 		}
 		
 		
 		$stu_score = $mobile->getScore($xh);
 		foreach ($stu_score as &$item)
-			$item['xh']=$xh;
+			$item['xh'] = $xh;
 		
-		$this->name('stu_info')->insert($stu_info,true);
-		$this->name('stu_course')->insertAll($stu_course,true);
-		$this->name('stu_score')->insertAll($stu_score,true);
+		$this->name('stu_info')->insert($stu_info, true);
+		$this->name('stu_course')->insertAll($stu_course, true);
+		$this->name('stu_score')->insertAll($stu_score, true);
 		
 		return true;
 	}
@@ -186,7 +212,16 @@ class EduSys extends Model
 	 */
 	public function updateCourse($xh)
 	{
-	
+		//TODO::增加学年学期
+		$mobile = new EduSysMobile();
+		$mobile->getCookies($xh);
+		$stu_course = $mobile->getCourse($xh);
+		foreach ($stu_course as &$item) {
+			$item['time'] = json_encode($item['time'], JSON_UNESCAPED_SLASHES);
+			$item['week'] = json_encode($item['week'], JSON_UNESCAPED_SLASHES);
+			$item['xh'] = $xh;
+		}
+		$this->name('stu_course')->insertAll($stu_course, true);
 	}
 	
 	/**
@@ -195,7 +230,11 @@ class EduSys extends Model
 	 */
 	public function updateInfo($xh)
 	{
-	
+		$mobile = new EduSysMobile();
+		$mobile->getCookies($xh);
+		$stu_info = $mobile->getInfo($xh);
+		$stu_info['xh'] = $xh;
+		$this->name('stu_info')->insert($stu_info, true);
 	}
 	
 	/**
@@ -204,8 +243,12 @@ class EduSys extends Model
 	 */
 	public function updateScore($xh)
 	{
-	
+		//TODO::增加学年学期
+		$mobile = new EduSysMobile();
+		$stu_score = $mobile->getScore($xh);
+		foreach ($stu_score as &$item)
+			$item['xh'] = $xh;
+		$this->name('stu_score')->insertAll($stu_score, true);
 	}
-	
 	
 }

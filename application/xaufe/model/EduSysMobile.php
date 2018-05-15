@@ -30,7 +30,7 @@ class EduSysMobile extends Model
 		$course_url = $this->getUrl('info', $this->xh);
 		
 		Curl::get($course_url, null, $r_cookies, $r_code, null, $r_header);
-		
+
 //		print_r($this->cookies);
 		
 		if ($r_code == '302' && strpos($r_header, 'Location: /XSXX/xsjbxx.aspx')) {
@@ -44,9 +44,18 @@ class EduSysMobile extends Model
 		}
 	}
 	
-	function login($xh, $psw)
+	static function login($xh, $psd)
 	{
-		//TODO::无验证码登入
+		$url = 'http://jiaowu.xaufe.edu.cn:8001/zftal-mobile/webservice/newmobile/MobileLoginXMLService%20HTTP/1.1';
+		$data = <<<data
+<v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/"><v:Header /><v:Body><n0:Login id="o0" c:root="1" xmlns:n0="http://service.login.newmobile.com/"><userName i:type="d:string">##学号##</userName><passWord i:type="d:string">##密码##</passWord><strKey i:type="d:string">WYNn2rNOtkuMGGlPrFSaMB0rQoBUmssS</strKey></n0:Login></v:Body></v:Envelope>
+data;
+		$data = str_replace('##学号##', $xh, $data);
+		$data = str_replace('##密码##', $psd, $data);
+		$re_data = Curl::post($url, $data);
+		if (strpos($re_data, 'app_token') > 0)
+			return true;
+		else return false;
 	}
 	
 	function transCousrse($html)
@@ -154,9 +163,9 @@ class EduSysMobile extends Model
 			foreach ($re_info as $key => $re) {
 				preg_match("#$re(.*?)(\) )?<#i", $sub, $sub_info);
 				
-				if ($key == 'xq'){
-					$xnxq = explode('-',$sub_info[1]);
-					$subjects[$id]['xn'] = $xnxq[0].'-'.$xnxq[1];
+				if ($key == 'xq') {
+					$xnxq = explode('-', $sub_info[1]);
+					$subjects[$id]['xn'] = $xnxq[0] . '-' . $xnxq[1];
 					$subjects[$id]['xq'] = $xnxq[2];
 					continue;
 				}
@@ -212,7 +221,7 @@ class EduSysMobile extends Model
 		else return true;
 	}
 	
-	public function getCourse($xh, $cookies = null, $xnxq = null)
+	public function getCourse($xh, $cookies = null, $xn = null, $xq = null)
 	{
 		$this->checkCookies($xh, $cookies);
 		
@@ -225,7 +234,7 @@ class EduSysMobile extends Model
 		} else return false;
 	}
 	
-	public function getScore($xh, $cookies = null, $xnxq = null)
+	public function getScore($xh, $cookies = null, $xn = null, $xq = null)
 	{
 		//TODO::对不同学期进行操作
 		if ($this->checkCookies($xh, $cookies)) {
@@ -237,6 +246,7 @@ class EduSysMobile extends Model
 	
 	public function getInfo($xh, $cookies = null)
 	{
+		//TODO::获取用户的头像
 		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/XSXX/xsjbxx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
