@@ -19,10 +19,10 @@ class EduSys
 		return $ss->updateAll($xh);
 	}
 	
-	function updateFreeClass()
+	function updateFreeClass($cookies,$xh)
 	{
 		$ss = new \app\xaufe\model\EduSys();
-		return $ss->updateFreeClass('ASP.NET_SessionId=ex0ceq551ho2xs55yrux5t45;','1605990711');
+		return $ss->updateFreeClass($cookies,$xh);
 	}
 	
 	function getCurrentTerm(){

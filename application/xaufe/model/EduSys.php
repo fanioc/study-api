@@ -14,8 +14,9 @@ class EduSys extends Model
 		'prefix' => 'edusys_',
 	];
 	
-	static function loginMobile($xh, $pwd){
-		if(EduSysMobile::login($xh,$pwd))
+	static function loginMobile($xh, $pwd)
+	{
+		if (EduSysMobile::login($xh, $pwd))
 			return true;
 		else return false;
 	}
@@ -84,6 +85,9 @@ class EduSys extends Model
 	public function getFreeClass($date = null)
 	{
 		$re_data = $this->name('freeclass')->where('date', '=', $date)->select()->toArray();
+		foreach ($re_data as &$data) {
+			$data['jsh'] = json_decode($data['jsh']);
+		}
 		//TODO::处理异常问题
 		return $re_data;
 	}

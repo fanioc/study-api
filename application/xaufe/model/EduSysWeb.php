@@ -252,6 +252,7 @@ class EduSysWeb extends Model
 			$html = iconv("gbk", "utf-8//ignore", $html);
 			
 			//循环记录页数
+			$jxl=[];//防止教室号重复
 			$pages = getSubstr($html, "dpDataGrid1_lblTotalRecords\">", "</span>条记录，每页显示");
 			
 			if ($pages % 200) $pages = (int)($pages / 200) + 1;
@@ -306,6 +307,7 @@ class EduSysWeb extends Model
 				}
 			}
 			//页数循环结束
+			
 		}
 		
 		/**

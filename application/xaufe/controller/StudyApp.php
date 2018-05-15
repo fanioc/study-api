@@ -78,7 +78,6 @@ class StudyApp extends Controller
 		return $re;
 	}
 	
-	
 	/**
 	 * 获取用户基本信息
 	 * @param $session

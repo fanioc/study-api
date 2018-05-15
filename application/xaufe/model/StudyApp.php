@@ -79,7 +79,7 @@ class StudyApp extends Model
 	 */
 	public function getUserBasicInfo($uid)
 	{
-		$info = $this->name('user_basic_info')->where('uid', '=', $uid)->find()->toArray();
+		$info = $this->name('user_basic_info')->where('uid', '=', $uid)->select()->toArray();
 		if (empty($info))
 			return ['errCode' => 235];//没有信息，请求更新
 		else return $info;
@@ -127,7 +127,7 @@ class StudyApp extends Model
 	 */
 	public function checkSession($session)
 	{
-		$result = $this->name('session')->where('session', '=', $session)->find()->toArray();
+		$result = $this->name('session')->where('session', '=', $session)->select()->toArray();
 		if (!empty($result)) {
 			return ['uid' => $result['uid'], 'openId' => $result['openId'], 'wx_session_key' => $result['wx_session_key']];
 		} else return ['errCode' => '4021'];//session不对
@@ -145,7 +145,7 @@ class StudyApp extends Model
 	 */
 	public function checkUserBind($uid)
 	{
-		$result = $this->name('user_bind')->where('uid', '=', $uid)->find()->toArray();
+		$result = $this->name('user_bind')->where('uid', '=', $uid)->select()->toArray();
 		if (!empty($result)) {
 			return ['xh' => $result['bind_xh']];
 		} else return ['errCode' => 324];//没有绑定
@@ -162,7 +162,7 @@ class StudyApp extends Model
 	public function getEduFreeClass($date = null)
 	{
 		if ($date == null)
-			$date = EduSys::getCurrentTerm();
+			$date = date('Y-m-d',time());
 		
 		$edu = new EduSys();
 		$class = $edu->getFreeClass($date);
