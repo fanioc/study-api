@@ -16,8 +16,9 @@ class EduSys extends Model
 	
 	static function loginMobile($xh, $pwd)
 	{
-		if (EduSysMobile::login($xh, $pwd))
-			return true;
+		$res = EduSysMobile::login($xh, $pwd);
+		if (!empty($res['errCode']))
+			return $res;
 		else return false;
 	}
 	
@@ -26,8 +27,6 @@ class EduSys extends Model
 		$web = new EduSysWeb();
 		$re_data = $web->login($xh, $pwd, $checkCode, $cookies);
 		//TODO::处理异常问题
-		if (isset($re_data['errcode']))
-			return false;
 		return $re_data;
 	}
 	

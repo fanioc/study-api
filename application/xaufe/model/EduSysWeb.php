@@ -103,7 +103,7 @@ class EduSysWeb extends Model
 		$image = Curl::get($check_code_url, null, $r_cookies, $r_code);
 		if ($r_code == '200')
 			return ['image' => 'data:image/gif;base64,' . base64_encode($image), 'cookies' => $r_cookies];
-		else return ['error' => $r_code];
+		else return ['errCode' => 32 + $r_code];
 	}
 	
 	/**
@@ -129,7 +129,7 @@ class EduSysWeb extends Model
 			
 		} else {
 			preg_match('/defer>alert\(\'(.*)\'\);document/i', $output, $error); //获取错误信息
-			return ['error' => $error[1]];
+			return ['errCode' => 3300, 'errMsg' => $error[1]];
 		}
 	}
 	
@@ -252,7 +252,7 @@ class EduSysWeb extends Model
 			$html = iconv("gbk", "utf-8//ignore", $html);
 			
 			//循环记录页数
-			$jxl=[];//防止教室号重复
+			$jxl = [];//防止教室号重复
 			$pages = getSubstr($html, "dpDataGrid1_lblTotalRecords\">", "</span>条记录，每页显示");
 			
 			if ($pages % 200) $pages = (int)($pages / 200) + 1;

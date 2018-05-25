@@ -39,10 +39,10 @@ class Curl
 	 * @param null $r_header string 返回的header
 	 * @param null $proxy 代理地址
 	 * @param null $proxy_user 代理用户名密码
-	 * @return string
+	 * @return string|bool
 	 */
 	public static function visit($url, $method = "GET", $post_data = null, $cookies = null, &$r_cookies = null, &$r_code = null,
-	                             $header = null, &$r_header = null, $time_out = 60, $proxy = null, $proxy_user = null)
+	                             $header = null, &$r_header = null, $time_out = 10, $proxy = null, $proxy_user = null)
 	{
 		$ch = curl_init();
 		
@@ -87,8 +87,10 @@ class Curl
 		
 		$out_put = curl_exec($ch);//执行
 		
-		$r_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);  //获取状态码
+		if ($out_put == false)
+			return false;
 		
+		$r_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);  //获取状态码
 		list($r_header, $body) = explode("\r\n\r\n", $out_put, 2);
 		
 		if (preg_match("/set\-cookie:\s*([^\r\n]*)/i", $r_header, $matches))
@@ -109,10 +111,10 @@ class Curl
 	 * @param null $r_header string 返回的header
 	 * @param null $proxy 代理地址
 	 * @param null $proxy_user 代理用户名密码
-	 * @return string
+	 * @return string|bool
 	 */
 	public static function post($url, $post_data = null, $cookies = null, &$r_cookies = null, &$r_code = null,
-	                            $header = null, &$r_header = null, $time_out = 60, $proxy = null, $proxy_user = null)
+	                            $header = null, &$r_header = null, $time_out = 10, $proxy = null, $proxy_user = null)
 	{
 		$ch = curl_init();
 		
@@ -150,13 +152,15 @@ class Curl
 		
 		$out_put = curl_exec($ch);//执行
 		
+		if ($out_put == false)
+			return false;
+		
 		$r_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);  //获取状态码
 		
 		list($r_header, $body) = explode("\r\n\r\n", $out_put, 2);
 		
 		if (preg_match("/set\-cookie:\s*([^\r\n]*)/i", $r_header, $matches))
 			$r_cookies = $matches[1];
-		
 		return $body;
 	}
 	
@@ -173,7 +177,7 @@ class Curl
 	 * @return string
 	 */
 	public static function get($url, $cookies = null, &$r_cookies = null, &$r_code = null,
-	                           $header = null, &$r_header = null, $time_out = 60, $proxy = null, $proxy_user = null)
+	                           $header = null, &$r_header = null, $time_out = 10, $proxy = null, $proxy_user = null)
 	{
 		$ch = curl_init();
 		
@@ -210,6 +214,9 @@ class Curl
 		curl_setopt_array($ch, $set_opt);
 		
 		$out_put = curl_exec($ch);//执行
+		
+		if ($out_put == false)
+			return false;
 		
 		$r_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);  //获取状态码
 		

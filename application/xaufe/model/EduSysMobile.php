@@ -29,9 +29,11 @@ class EduSysMobile extends Model
 		
 		$course_url = $this->getUrl('info', $this->xh);
 		
+		
 		Curl::get($course_url, null, $r_cookies, $r_code, null, $r_header);
 
-//		print_r($this->cookies);
+//		print_r($r_cookies);
+//		print_r($r_header);
 		
 		if ($r_code == '302' && strpos($r_header, 'Location: /XSXX/xsjbxx.aspx')) {
 			
@@ -48,11 +50,15 @@ class EduSysMobile extends Model
 	{
 		$url = 'http://jiaowu.xaufe.edu.cn:8001/zftal-mobile/webservice/newmobile/MobileLoginXMLService%20HTTP/1.1';
 		$data = <<<data
-<v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/"><v:Header /><v:Body><n0:Login id="o0" c:root="1" xmlns:n0="http://service.login.newmobile.com/"><userName i:type="d:string">##学号##</userName><passWord i:type="d:string">##密码##</passWord><strKey i:type="d:string">WYNn2rNOtkuMGGlPrFSaMB0rQoBUmssS</strKey></n0:Login></v:Body></v:Envelope>
+<v:Envelope xmlns:i="0" xmlns:d="0" xmlns:c="0"  xmlns:v="http://schemas.xmlsoap.org/soap/envelope/"><v:Header /><v:Body><n0:Login id="o0" c:root="1" xmlns:n0="http://service.login.newmobile.com/"><userName i:type="d:string">##学号##</userName><passWord i:type="d:string">##密码##</passWord><strKey i:type="d:string">WYNn2rNOtkuMGGlPrFSaMB0rQoBUmssS</strKey></n0:Login></v:Body></v:Envelope>
 data;
 		$data = str_replace('##学号##', $xh, $data);
 		$data = str_replace('##密码##', $psd, $data);
 		$re_data = Curl::post($url, $data);
+		
+		if ($re_data==false)
+			return ['errCode'=>1001];
+		
 		if (strpos($re_data, 'app_token') > 0)
 			return true;
 		else return false;
@@ -71,6 +77,9 @@ data;
 			$course_url = config('EduSysMobile_url') . "/KBCXGL/" . $url;
 			
 			$tmp_html = Curl::get($course_url, $this->cookies);
+			
+			if ($tmp_html==false)
+				return ['errCode'=>1003];
 			
 			preg_match_all("#<li class=\"ui-border-b\"\>(.*?)<\/li\>#is", $tmp_html, $re_sub);
 			
@@ -230,6 +239,9 @@ data;
 		if ($this->getCookies($xh)) {
 			$location_url = config('EduSysMobile_url') . "/KBCXGL/xskcbcx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
+			if ($html==false)
+				return ['errCode'=>1002];
+			
 			return $this->transCousrse($html);
 		} else return false;
 	}
@@ -240,6 +252,9 @@ data;
 		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/XSCJCX/xsdqcjcx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
+			if ($html==false)
+				return ['errCode'=>1004];
+			
 			return $this->transScore($html);
 		} else return false;
 	}
@@ -250,6 +265,10 @@ data;
 		if ($this->checkCookies($xh, $cookies)) {
 			$location_url = config('EduSysMobile_url') . "/XSXX/xsjbxx.aspx";
 			$html = Curl::get($location_url, $this->cookies, $r_cookies, $r_code);
+			
+			if ($html==false)
+				return ['errCode'=>1002];
+			
 			$info = $this->transInfo($html);
 			return $info;
 		} else return false;

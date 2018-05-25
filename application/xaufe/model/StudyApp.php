@@ -2,6 +2,7 @@
 
 namespace app\xaufe\model;
 
+use think\db;
 use think\Model;
 
 class StudyApp extends Model
@@ -13,27 +14,36 @@ class StudyApp extends Model
 		'prefix' => 'study_',
 	];
 	
+	/**
+	 * @param $encryptedData
+	 * @param $iv
+	 * @param $sessionKey
+	 * @param $appid
+	 * @return array|string
+	 */
 	private function decryptData($encryptedData, $iv, $sessionKey, $appid)
 	{
 		if (strlen($sessionKey) != 24) {
-			return ['errCode' => 41001];
+			return ['errCode' => 2101];
 		}
 		$aesKey = base64_decode($sessionKey);
 		
 		if (strlen($iv) != 24) {
-			return ['errCode' => 41002];
+			return ['errCode' => 2102];
 		}
+		
 		$aesIV = base64_decode($iv);
 		$aesCipher = base64_decode($encryptedData);
 		$result = openssl_decrypt($aesCipher, "AES-128-CBC", $aesKey, 1, $aesIV);
 		
 		$dataObj = json_decode($result, true);
 		if ($dataObj == NULL) {
-			return ['errCode' => 41003];
+			return ['errCode' => 2103];
 		}
 		if ($dataObj['watermark']['appid'] != $appid) {
-			return ['errCode' => 41003];
+			return ['errCode' => 2104];
 		}
+		
 		$data = $result;
 		return $data;
 	}
@@ -43,8 +53,8 @@ class StudyApp extends Model
 		$url = config('StudyApp_sessionkey_url') . "&appid=" . config('StudyApp_appid') . '&secret=' . config('StudyApp_secret') . '&js_code=' . $code;
 		$re_data = json_decode(file_get_contents($url), true);
 		
-		if (!empty($re_data['errcode'])) {
-			return $re_data;
+		if (!empty($re_data['errcode'])) { //此errcode是微信后台发送过来的
+			return ['errCode' => '2500' . $re_data['errcode']];
 		} else {
 			$openId = $re_data['openid'];
 			$wx_session_key = $re_data['session_key'];
@@ -54,34 +64,57 @@ class StudyApp extends Model
 				$rand .= chr(mt_rand(33, 126));
 			
 			$session = md5($rand);
+			$time = getCurrentTime();
 			
-			$this->name('session')->insert(['openId' => $openId, 'session' => $session, 'wx_session_key' => $wx_session_key, 'update_time' => getCurrentTime()], true);
-			//TODO::解决id列增加的问题
+			$sql = "INSERT INTO `study_session` (openId,session,wx_session_key)
+					VALUES(?,?,?)
+					  ON DUPLICATE KEY
+					  UPDATE `session`=?,`wx_session_key`=?,`update_time`=?";
+			Db::execute($sql, [$openId, $session, $wx_session_key, $session, $wx_session_key, $time]);
+			
 			return ['session' => $session];
 		}
 	}
 	
-	public function bindEduSys($uid, $openId, $xh, $psd)
+	/**
+	 * @param $uid
+	 * @param $openId
+	 * @param $xh
+	 * @param $psd
+	 * @param $check_code
+	 * @return array|bool
+	 * @throws \think\Exception
+	 * @throws \think\exception\DbException
+	 * @throws db\exception\DataNotFoundException
+	 * @throws db\exception\ModelNotFoundException
+	 */
+	public function bindEduSys($uid, $openId, $xh, $psd, $check_code)
 	{
-		if (EduSys::loginMobile($xh, $psd)) {
-			$this->name('user_bind')->insert(['uid' => $uid, 'openId' => $openId, 'bind_xh' => $xh, 'bind_psd' => $psd, 'bind_time' => getCurrentTime()], true);
-			return true;
-		} else return false;
+		$cookies = $this->name('user_bind_cookies')->where('uid', '=', $uid)->find();
+		if ($cookies == false)
+			return ['errCode' => 3202];
+		$cookies = $cookies->toArray()['web_cookies'];
+		
+		$re = EduSys::loginWeb($xh, $psd, $check_code, $cookies);
+		if (!empty($re['errCode']))
+			return $re;
+		
+		$this->name('user_bind')->insert(['uid' => $uid, 'openId' => $openId, 'bind_xh' => $xh, 'bind_psd' => $psd, 'bind_time' => getCurrentTime()], true);
+		return true;
 	}
 	
 	/**
 	 * @param $uid
 	 * @return array
-	 * @throws \think\Exception
-	 * @throws \think\db\exception\DataNotFoundException
-	 * @throws \think\db\exception\ModelNotFoundException
 	 * @throws \think\exception\DbException
+	 * @throws db\exception\DataNotFoundException
+	 * @throws db\exception\ModelNotFoundException
 	 */
 	public function getUserBasicInfo($uid)
 	{
 		$info = $this->name('user_basic_info')->where('uid', '=', $uid)->select()->toArray();
 		if (empty($info))
-			return ['errCode' => 235];//没有信息，请求更新
+			return ['errCode' => 3101];//没有信息，请求更新
 		else return $info;
 	}
 	
@@ -105,14 +138,16 @@ class StudyApp extends Model
 			$signature2 = sha1($rawData . $wx_session_key);
 			if ($signature2 == $signature) {
 				$re_data = json_decode($this->decryptData($encryptedData, $vi, $wx_session_key, config('StudyApp_appid')), true);
-			} else return ['errCode', 5066];//非微信数据
+				if (!empty($re_data['errCode']))
+					return $re_data;
+			} else return ['errCode', 3201];//非微信数据
 		}
 		
 		$re_data['uid'] = $uid;
 		$re_data['openId'] = $openId;
 		
 		$this->name('user_basic_info')->insert($re_data, true);
-		//TODO::解决id列增加的问题，改replace 为 unique key update
+		
 		return true;
 	}
 	
@@ -127,11 +162,11 @@ class StudyApp extends Model
 	 */
 	public function checkSession($session)
 	{
-		$result = $this->name('session')->where('session', '=', $session)->select()->toArray();
+		$result = $this->name('session')->where('session', '=', $session)->find();
 		if (!empty($result)) {
+			$result = $result->toArray();
 			return ['uid' => $result['uid'], 'openId' => $result['openId'], 'wx_session_key' => $result['wx_session_key']];
-		} else return ['errCode' => '4021'];//session不对
-		
+		} else return ['errCode' => 3102];//session不对
 	}
 	
 	/**
@@ -148,7 +183,7 @@ class StudyApp extends Model
 		$result = $this->name('user_bind')->where('uid', '=', $uid)->select()->toArray();
 		if (!empty($result)) {
 			return ['xh' => $result['bind_xh']];
-		} else return ['errCode' => 324];//没有绑定
+		} else return ['errCode' => 3103];//没有绑定
 	}
 	
 	/**
@@ -162,7 +197,7 @@ class StudyApp extends Model
 	public function getEduFreeClass($date = null)
 	{
 		if ($date == null)
-			$date = date('Y-m-d',time());
+			$date = date('Y-m-d', time());
 		
 		$edu = new EduSys();
 		$class = $edu->getFreeClass($date);
@@ -203,7 +238,7 @@ class StudyApp extends Model
 	
 	/**
 	 * @param $uid
-	 * @return bool
+	 * @return array|bool
 	 * @throws \think\Exception
 	 * @throws \think\db\exception\DataNotFoundException
 	 * @throws \think\db\exception\ModelNotFoundException
@@ -215,12 +250,24 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		$edu = new EduSys();
 		$edu->updateCourse($re_info['xh']);
 		return true;
 	}
+	
+	public function getCheckCode($uid)
+	{
+		$res = EduSys::getCheckCode();
+		
+		if (!empty($res['errCode']))
+			return $res;
+		
+		$this->name('user_bind_cookies')->insert(['uid' => $uid, 'web_cookies' => $res['cookies'], 'web_uptime' => getCurrentTime()], true);
+		return ['check_code' => $res['image']];
+	}
+	
 	
 	static function getCurrentTerm()
 	{
@@ -242,7 +289,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		if ($xn == null) {
 			$term = EduSys::getCurrentTerm();
@@ -269,7 +316,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		if ($xn == null) {
 			$term = EduSys::getCurrentTerm();
@@ -294,7 +341,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		$edu = new EduSys();
 		return $edu->getInfo($re_info['xh']);
@@ -302,7 +349,7 @@ class StudyApp extends Model
 	
 	/**
 	 * @param $uid
-	 * @return bool
+	 * @return bool|array
 	 * @throws \think\Exception
 	 * @throws \think\db\exception\DataNotFoundException
 	 * @throws \think\db\exception\ModelNotFoundException
@@ -314,7 +361,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		$edu = new EduSys();
 		$edu->updateScore($re_info['xh']);
@@ -323,7 +370,7 @@ class StudyApp extends Model
 	
 	/**
 	 * @param $uid
-	 * @return bool
+	 * @return bool|array
 	 * @throws \think\Exception
 	 * @throws \think\db\exception\DataNotFoundException
 	 * @throws \think\db\exception\ModelNotFoundException
@@ -334,7 +381,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		$edu = new EduSys();
 		$edu->updateInfo($re_info['xh']);
@@ -344,7 +391,7 @@ class StudyApp extends Model
 	/**
 	 * 更新当前学期的所有
 	 * @param $uid
-	 * @return bool
+	 * @return bool|array
 	 * @throws \think\Exception
 	 * @throws \think\db\exception\DataNotFoundException
 	 * @throws \think\db\exception\ModelNotFoundException
@@ -355,7 +402,7 @@ class StudyApp extends Model
 		$re_info = $this->checkUserBind($uid);
 		
 		if (!empty($re_info['errCode']))
-			return false;
+			return $re_info;
 		
 		$edu = new EduSys();
 		$edu->updateAll($re_info['xh']);
