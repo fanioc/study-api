@@ -174,7 +174,7 @@ class EduSys extends Model
 		$score = $this->name('stu_score')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select()->toArray();
 		
 		if (empty($score))
-			return ['errCode' => 41]; //数据库内无用户信息，请尝试更新
+			return ['errCode' => 410000]; //数据库内无用户信息，请尝试更新
 		return $score;
 	}
 	

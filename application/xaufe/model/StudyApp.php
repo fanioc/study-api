@@ -112,7 +112,7 @@ class StudyApp extends Model
 	 */
 	public function getUserBasicInfo($uid)
 	{
-		$info = $this->name('user_basic_info')->where('uid', '=', $uid)->select()->toArray();
+		$info = $this->name('user_info_basic')->where('uid', '=', $uid)->select()->toArray();
 		if (empty($info))
 			return ['errCode' => 3101];//没有信息，请求更新
 		else return $info;
@@ -146,7 +146,7 @@ class StudyApp extends Model
 		$re_data['uid'] = $uid;
 		$re_data['openId'] = $openId;
 		
-		$this->name('user_basic_info')->insert($re_data, true);
+		$this->name('user_info_basic')->insert($re_data, true);
 		
 		return true;
 	}
@@ -180,11 +180,17 @@ class StudyApp extends Model
 	 */
 	public function checkUserBind($uid)
 	{
-		$result = $this->name('user_bind')->where('uid', '=', $uid)->select()->toArray();
+		$result = $this->name('user_bind')->where('uid', '=', $uid)->find()->toArray();
 		if (!empty($result)) {
 			return ['xh' => $result['bind_xh']];
 		} else return ['errCode' => 3103];//没有绑定
 	}
+	
+	/**
+	 * ########################################
+	 * 连接教务系统模块
+	 * ########################################
+	 */
 	
 	/**
 	 * 获取空教室信息
@@ -196,45 +202,11 @@ class StudyApp extends Model
 	 */
 	public function getEduFreeClass($date = null)
 	{
-		if ($date == null)
-			$date = date('Y-m-d', time());
-		
 		$edu = new EduSys();
 		$class = $edu->getFreeClass($date);
 		return $class;
 	}
 	
-	/**
-	 * 读取数据库中用户自定义的课程和教务系统数据库中的课程，两者相加
-	 * @param $uid
-	 * @return array
-	 * @throws \think\Exception
-	 * @throws \think\db\exception\DataNotFoundException
-	 * @throws \think\db\exception\ModelNotFoundException
-	 * @throws \think\exception\DbException
-	 */
-	public function getUserAllCourse($uid)
-	{
-		$re_info = $this->checkUserBind($uid);
-		
-		
-		//TODO::获取所有课程叠加
-	}
-	
-	public function addUserCustomCourse($uid, $openId, $course)
-	{
-	
-	}
-	
-	public function delUserCustomCourse($uid, $course)
-	{
-	
-	}
-	
-	public function getUserCustomCourse($uid)
-	{
-	
-	}
 	
 	/**
 	 * @param $uid
@@ -293,7 +265,8 @@ class StudyApp extends Model
 		
 		if ($xn == null) {
 			$term = EduSys::getCurrentTerm();
-			$xn = $term['xh'];
+//			print_r($term);
+			$xn = $term['xn'];
 			$xq = $term['xq'];
 		}
 		
@@ -409,6 +382,51 @@ class StudyApp extends Model
 		return true;
 	}
 	
+	
+	/**
+	 * ########################################
+	 * 自定义课表模块
+	 * ########################################
+	 */
+	
+	/**
+	 * 读取数据库中用户自定义的课程和教务系统数据库中的课程，两者相加
+	 * @param $uid
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function getUserAllCourse($uid)
+	{
+		$re_info = $this->checkUserBind($uid);
+		//TODO::获取所有课程叠加
+		
+	}
+	
+	public function addUserCustomCourse($uid, $openId, $course)
+	{
+	
+	}
+	
+	public function delUserCustomCourse($uid, $course_id)
+	{
+	
+	}
+	
+	public function getUserCustomCourse($uid)
+	{
+	
+	}
+	
+	
+	/**
+	 * ########################################
+	 * 预约自习模块
+	 * ########################################
+	 */
+	
 	/**
 	 * 获取用户study_score的详细信息
 	 * @param $uid
@@ -420,15 +438,189 @@ class StudyApp extends Model
 	
 	/**
 	 * 增加study_score
-	 * @param $openId
+	 * @param $uid
 	 * @param $type
-	 * @param $study_socre
+	 * @param $study_score
 	 * @param $remakes
 	 */
-	public function addUserStudyScore($uid, $openId, $type, $study_socre, $remakes)
+	public function addUserStudyScore($uid, $type, $study_score, $remakes)
 	{
 	
 	}
 	
+	public function sendMsg($uid, $to_uid, $content)
+	{
+	
+	}
+	
+	public function getMsg($uid, $other_uid)
+	{
+	
+	}
+	
+	public function leaveMessage($uid, $content)
+	{
+	
+	}
+	
+	//发送用户邀请
+	public function sendInvite($uid, $openId, $other_uid, $time, $msg = null)
+	{
+	
+	}
+	
+	
+	/**
+	 * ########################################
+	 * 社区模块
+	 * ########################################
+	 */
+	
+	/**
+	 * @param $uid
+	 * @param $title
+	 * @param $img_url
+	 * @param $content
+	 * @param $type
+	 * @param null $sort
+	 * @return array
+	 */
+	public function publishDynamic($uid, $title, $img_url, $content, $type, $sort = null)
+	{
+		$result = $this->name('dynamic_Q')->insert(['publish_uid' => $uid, 'title' => $title, 'content' => $content, 'sort' => $sort, 'img_url' => $img_url, 'time' => getCurrentTime(), 'type' => $type]);
+		if ($result == 1)
+			return ['errMsg' => '发表成功'];
+		else return ['errCode' => 3501];
+	}
+	
+	/**
+	 * @param null $last_id
+	 * @return array|mixed
+	 * @throws \think\exception\PDOException
+	 * @throws db\exception\BindParamException
+	 */
+	public function getDynamicList($last_id = null)
+	{
+		if ($last_id == null)
+			$add = 'AND dynamic_id<' . $last_id;
+		else $add = '';
+		
+		$sql = "SELECT
+					dynamic_id,publish_uid,title,sort,time,img_url,type,
+					SUBSTRING(study_dynamic_Q.content,1,20)content,
+					(SELECT count(dynamic_id) FROM study_dynamic_A WHERE study_dynamic_A.dynamic_id = study_dynamic_Q.dynamic_id)ans_num
+				FROM
+					study_dynamic_Q
+				WHERE
+				type >= 1
+				$add
+				ORDER BY
+					dynamic_id
+				LIMIT 10";
+		
+		$result = $this->query($sql);
+		
+		if ($result != false)
+			return $result;
+		else return ['errCode' => 3504];
+	}
+	
+	public function AnswerDynamic($uid, $dynamic_id, $content, $type)
+	{
+		$result = $this->name('dynamic_A')->insert(['dynamic_id' => $dynamic_id, 'answer' => $uid, 'content' => $content, 'time' => getCurrentTime(), 'type' => $type]);
+		if ($result == 1)
+			return ['errMsg' => '回答成功'];
+		else return ['errCode' => 3501];
+	}
+	
+	public function delDynamicAnswer($uid, $dynamic_id, $answer_id)
+	{
+		$result = $this->name('dynamic_A')->where('dynamic_id', '=', $dynamic_id)->where('answer_id', '=', $answer_id)->where('answer', '=', $uid)->update(['type' => 0]);
+		if ($result == 1)
+			return ['errMsg' => '删除成功'];
+		else return ['errCode' => 3502];
+	}
+	
+	public function setDynamicAgree($uid, $dynamic_id, $answer_id, $agree)
+	{
+		$result = $this->name('dynamic_agree')->insert(['dynamic_id' => $dynamic_id, 'answer_id' => $answer_id, 'agree' => $agree, 'user_uid' => $uid, 'time' => getCurrentTime()], true);
+		if ($result == 1) {
+			if ($agree == 0)
+				return ['errMsg' => '不赞同'];
+			else return ['errMsg' => '赞同'];
+		} else return ['errCode' => 3503];
+	}
+	
+	/**
+	 * 返回一个单独动态的内容，回答列表
+	 * @param $dynamic_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 * @throws db\exception\BindParamException
+	 * @throws db\exception\DataNotFoundException
+	 * @throws db\exception\ModelNotFoundException
+	 */
+	public function getDynamicContent($dynamic_id)
+	{
+		$quest = $this->name('dynamic_Q')->where('dynamic_id', '=', $dynamic_id)->where('type>=1')->find();
+		if ($quest==false)
+			return ['errCode'=>3505];
+		$sql = "SELECT
+					dynamic_id,answer_id,time,
+					SUBSTRING( content, 1, 20 )content,
+					( SELECT count( * ) FROM study_dynamic_agree WHERE Q_id = A.dynamic_id AND A_id = A.answer_id AND agree = 1 ) agree_num
+				FROM
+					study_dynamic_A A
+				WHERE
+					type >= 1
+					AND dynamic_id = ?
+				ORDER BY
+					dynamic_id";
+		$ans = $this->query($sql,[$dynamic_id]);
+		if ($ans == false){
+			return['dynamic'=>$quest,'ans_errCode'=>3506];
+		} return['dynamic'=>$quest->toArray(),'ans_list'=>$ans];
+	}
+	
+	/**
+	 * 获取问题内容，以及是否赞同和赞同数量
+	 * @param $uid
+	 * @param $dynamic_id
+	 * @param $answer_id
+	 * @return array|mixed
+	 * @throws \think\exception\PDOException
+	 * @throws db\exception\BindParamException
+	 */
+	public function getDynamicAns($uid,$dynamic_id,$answer_id){
+		$sql="SELECT
+					*,
+					(SELECT count(*)FROM study_dynamic_agree WHERE Q_id=A.dynamic_id AND A_id = A.answer_id AND agree = 1)agree_num,
+					(SELECT agree FROM study_dynamic_agree WHERE Q_id=A.dynamic_id AND A_id = A.answer_id AND user_uid=?)is_agree
+				FROM
+					study_dynamic_A A
+				WHERE
+					dynamic_id = ?
+					AND answer_id =?";
+		$result = $this->query($sql,[$uid,$dynamic_id,$answer_id]);
+		if ($result == false)
+			return  ['errCode' => 3507];
+		else return $result;
+	}
+	
+	public function delDynamic($uid, $dynamic_id)
+	{
+		$result = $this->name('dynamic_Q')->where('dynamic_id', '=', $dynamic_id)->where('publish_uid', '=', $uid)->update(['type' => 0]);
+		if ($result == 1)
+			return ['errMsg' => '删除成功'];
+		else return ['errCode' => 3508];
+	}
+	
+	/**
+	 * ########################################
+	 * 社区模块
+	 * ########################################
+	 */
 	
 }

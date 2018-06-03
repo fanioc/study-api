@@ -374,6 +374,167 @@ class StudyApp extends Controller
 		return $this->afterDatafomat($EduInfo);
 	}
 	
+	/**
+	 * 获取动态列表，last_id是上次获取最小的dynamic_id
+	 * @param $session
+	 * @param null $last_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\BindParamException
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 */
+	public function getDynamicList($session, $last_id = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$dynamic_list = $model->getDynamicList($last_id);
+		return $this->afterDatafomat($dynamic_list);
+	}
+	
+	/**
+	 * 回答问题，type=1代表正常，2代表匿名
+	 * @param $session
+	 * @param $dynamic_id
+	 * @param $content
+	 * @param $type
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function AnswerDynamic($session, $dynamic_id, $content, $type)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->AnswerDynamic($re_info['uid'],$dynamic_id,$content,$type);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * 删除回答，只有自己能删除自己的回答
+	 * @param $session
+	 * @param $dynamic_id
+	 * @param $answer_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function delDynamicAnswer($session, $dynamic_id, $answer_id)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->delDynamicAnswer($re_info['uid'],$dynamic_id,$answer_id);
+		return $this->afterDatafomat($result);
+	
+	}
+	
+	/**
+	 * 赞同或不赞同回答
+	 * @param $session
+	 * @param $dynamic_id
+	 * @param $answer_id
+	 * @param $agree
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function setDynamicAgree($session, $dynamic_id, $answer_id, $agree)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->setDynamicAgree($re_info['uid'],$dynamic_id,$answer_id,$agree);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * 获取一个问题的内容和回答列表
+	 * @param $session
+	 * @param $dynamic_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\BindParamException
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 */
+	public function getDynamicContent($session, $dynamic_id)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->getDynamicContent($dynamic_id);
+		return $this->afterDatafomat($result);
+	
+	}
+	
+	/**
+	 * 查看问题的详细信息
+	 * @param $session
+	 * @param $dynamic_id
+	 * @param $answer_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\BindParamException
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 */
+	public function getDynamicAns($session, $dynamic_id, $answer_id)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->getDynamicAns($re_info['uid'],$dynamic_id,$answer_id);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * 删除问题
+	 * @param $session
+	 * @param $dynamic_id
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function delDynamic($session, $dynamic_id)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->delDynamic($re_info['uid'],$dynamic_id);
+		return $this->afterDatafomat($result);
+	}
+	
 	//TODO::增加自定义课表部分
 	//TODO::用户自定义信息部分，个性签名，用户认证， 展示已经学习xx次  （关注人，被关注人...）
 	//TODO::增加用户StudyScore积分部分，增加积分，查看积分信息
