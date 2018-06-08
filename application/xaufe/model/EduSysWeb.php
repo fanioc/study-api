@@ -296,7 +296,7 @@ class EduSysWeb extends Model
 				 * 以教学楼名称为键值
 				 */
 				foreach ($jxl as $jxlName => $jsh) {
-					$free_class[$sjd_key][] = [
+					$free_class[$sjd_key + 1][] = [
 //						'教室编号' => $lbs[1][$index],
 						'教学楼' => $jxlName,
 						'教室号' => $jsh,

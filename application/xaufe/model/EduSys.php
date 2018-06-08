@@ -136,11 +136,16 @@ class EduSys extends Model
 	 * @throws \think\db\exception\ModelNotFoundException
 	 * @throws \think\exception\DbException
 	 */
-	public function getCourse($xh, $xn, $xq)
+	public function getCourse($xh, $xn = null, $xq = null)
 	{
-		$course = $this->name('stu_course')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select()->toArray();
-		if (empty($course))
-			return ['errCode' => 43]; //数据库内无课表数据，请尝试更新课表
+		$course = $this->name('stu_course')->field('xn,xq,class_name,time,week,teacher,type,location')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select();
+		if ($course == false)
+			return ['errCode' => 3106]; //数据库读取课表出错
+		$course = $course->toArray();
+		foreach ($course as &$item) {
+			$item['time'] = json_decode($item['time'], true);
+			$item['week'] = json_decode($item['week'], true);
+		}
 		return $course;
 	}
 	
@@ -156,7 +161,7 @@ class EduSys extends Model
 	{
 		$info = $this->name('stu_info')->where('xh', '=', $xh)->find()->toArray();
 		if (empty($info))
-			return ['errCode' => 42]; //数据库内无用户信息，请尝试更新
+			return ['errCode' => 3105]; //数据库内无用户信息，请尝试更新
 		return $info;
 	}
 	
@@ -174,7 +179,7 @@ class EduSys extends Model
 		$score = $this->name('stu_score')->where('xh', '=', $xh)->where('xn', '=', $xn)->where('xq', '=', $xq)->select()->toArray();
 		
 		if (empty($score))
-			return ['errCode' => 410000]; //数据库内无用户信息，请尝试更新
+			return ['errCode' => 3107]; //数据库内无用户信息，请尝试更新
 		return $score;
 	}
 	
@@ -213,7 +218,7 @@ class EduSys extends Model
 	 * 更新数据库中的学生课表信息
 	 * @param $xh
 	 */
-	public function updateCourse($xh)
+	public function updateCourse($xh, $xn = null, $xq = null)
 	{
 		//TODO::增加学年学期
 		$mobile = new EduSysMobile();
@@ -244,11 +249,11 @@ class EduSys extends Model
 	 * 更新数据库中的学生成绩信息
 	 * @param $xh
 	 */
-	public function updateScore($xh)
+	public function updateScore($xh, $xn = null, $xq = null)
 	{
 		//TODO::增加学年学期
 		$mobile = new EduSysMobile();
-		$stu_score = $mobile->getScore($xh);
+		$stu_score = $mobile->getScore($xh, $xn, $xq);
 		foreach ($stu_score as &$item)
 			$item['xh'] = $xh;
 		$this->name('stu_score')->insertAll($stu_score, true);

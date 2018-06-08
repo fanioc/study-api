@@ -10,7 +10,7 @@ class StudyApp extends Controller
 	private function afterDatafomat($data)
 	{
 		if (!empty($data['errCode']))
-			return $data;
+			return ['errCode' => $data['errCode'], 'data' => $data];
 		else return ['errCode' => 0, 'data' => $data];
 	}
 	
@@ -25,8 +25,11 @@ class StudyApp extends Controller
 			{
 				//找到文件存放位置，注意tp5框架的相对路径前面不用/
 				//这里的filename进行了拼接，前面是路径，后面从date开始是文件名
-				//我在static文件下新建了一个file文件用来存放文件，要注意自己建一个文件才能存放传过来的文件
-				$filename = "static/upLoadFile/" . date("YmdHis") . '_' . $_FILES["file"]["name"];
+				//我在static文件下新建了一个file文件用来 存放文件，要注意自己建一个文件才能存放传过来的文件
+				$arr = explode('.', basename($_FILES["file"]["name"]));
+				$tzm = end($arr);
+				$filename = "static/upLoadFile/" . time() . '_' . rand(100000, 1000000) . '.' . $tzm;
+				
 				//判断文件是否存在
 				if (file_exists($filename)) {
 					return ['errCode' => 3403];
@@ -34,7 +37,7 @@ class StudyApp extends Controller
 					//保存文件
 					//move_uploaded_file是php自带的函数，前面是旧的路径，后面是新的路径
 					move_uploaded_file($_FILES["file"]["tmp_name"], $filename);
-					return ['errCode' => 0, 'filesUrl' => 'study.xietan.xin/' . $filename];
+					return ['errCode' => 0, 'fileUrl' => 'https://study.xietan.xin/' . $filename];
 				}
 			} else {
 				return ['errCode' => 3402];
@@ -67,7 +70,7 @@ class StudyApp extends Controller
 	/**
 	 * 第三方入口
 	 */
-	public function star()
+	public function start()
 	{
 		$signature = request()->get('signature');
 		$timestamp = request()->get('timestamp');
@@ -117,7 +120,7 @@ class StudyApp extends Controller
 	/**
 	 * 获取用户基本信息
 	 * @param $session
-	 * @param null $other_uid 如果$other_uid被赋值，则获取他人的信息，用于文章中个人信息的获取
+	 * @param null $other_uid 如果$other_uid被赋值，则获取他人的信息，用于文章中个人信息的获取,other_uid可以是数组，返回用户信息数组
 	 * @return array
 	 * @throws \think\Exception
 	 * @throws \think\db\exception\DataNotFoundException
@@ -135,15 +138,36 @@ class StudyApp extends Controller
 			$re_info = $model->getUserBasicInfo($re_info['uid']);
 		else {
 			if (!is_array($other_uid))
-				$re_info = $model->getUserBasicInfo($other_uid);
+				$re_info = $model->getUserBasicInfo($re_info['uid'], $other_uid);
 			else {
 				foreach ($other_uid as $value) {
-					$re_info += $model->getUserBasicInfo($value);
+					$re_info[$value] = $model->getUserBasicInfo($re_info['uid'], $value);
 				}
 			}
 		}
 		
 		return $this->afterDatafomat($re_info);
+	}
+	
+	/**
+	 * @param $session
+	 * @param $bestar_uid
+	 * @param $star
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function setUserStar($session, $bestar_uid, $star)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->setUserStar($re_info['uid'], $bestar_uid, $star);
+		return $this->afterDatafomat($result);
 	}
 	
 	/**
@@ -221,6 +245,12 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
+		
 		$re_score = $model->getUserEduScore($re_info['uid'], $xn, $xq);
 		return $this->afterDatafomat($re_score);
 	}
@@ -247,6 +277,12 @@ class StudyApp extends Controller
 		$re_info = $model->checkSession($session);
 		if (!empty($re_info['errCode']))
 			return $re_info;
+		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
 		
 		$re_course = $model->getUserEduCourse($re_info['uid'], $xn, $xq);
 		return $this->afterDatafomat($re_course);
@@ -375,6 +411,30 @@ class StudyApp extends Controller
 	}
 	
 	/**
+	 * @param $session
+	 * @param $title
+	 * @param $img_url
+	 * @param $content
+	 * @param $type
+	 * @param null $sort
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function publishDynamic($session, $title, $img_url, $content, $type, $sort = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->publishDynamic($re_info['uid'], $title, $img_url, $content, $type, $sort);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
 	 * 获取动态列表，last_id是上次获取最小的dynamic_id
 	 * @param $session
 	 * @param null $last_id
@@ -394,7 +454,23 @@ class StudyApp extends Controller
 			return $re_info;
 		
 		$dynamic_list = $model->getDynamicList($last_id);
-		return $this->afterDatafomat($dynamic_list);
+		
+		if (!empty($dynamic_list['errCode']))
+			$this->afterDatafomat($dynamic_list);
+		
+		$data = array();
+		foreach ($dynamic_list as $item) {
+			$data[] = ["userID" => $item['publish_uid'],
+				"question_title" => $item['title'],
+				"question_describe" => $item['content'],
+				"question_id" => $item['dynamic_id'],
+				"card_img" => $item['img_url'],
+				"dynamic_sort" => $item['sort'],
+				"comment_num" => $item['ans_num'],
+				"dynamic_type" => $item['type'],
+				"dynamic_time" => $item['time']];
+		}
+		return $this->afterDatafomat($data);
 	}
 	
 	/**
@@ -416,7 +492,7 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
-		$result = $model->AnswerDynamic($re_info['uid'],$dynamic_id,$content,$type);
+		$result = $model->AnswerDynamic($re_info['uid'], $dynamic_id, $content, $type);
 		return $this->afterDatafomat($result);
 	}
 	
@@ -438,9 +514,9 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
-		$result = $model->delDynamicAnswer($re_info['uid'],$dynamic_id,$answer_id);
+		$result = $model->delDynamicAnswer($re_info['uid'], $dynamic_id, $answer_id);
 		return $this->afterDatafomat($result);
-	
+		
 	}
 	
 	/**
@@ -462,7 +538,7 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
-		$result = $model->setDynamicAgree($re_info['uid'],$dynamic_id,$answer_id,$agree);
+		$result = $model->setDynamicAgree($re_info['uid'], $dynamic_id, $answer_id, $agree);
 		return $this->afterDatafomat($result);
 	}
 	
@@ -487,7 +563,7 @@ class StudyApp extends Controller
 		
 		$result = $model->getDynamicContent($dynamic_id);
 		return $this->afterDatafomat($result);
-	
+		
 	}
 	
 	/**
@@ -510,7 +586,7 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
-		$result = $model->getDynamicAns($re_info['uid'],$dynamic_id,$answer_id);
+		$result = $model->getDynamicAns($re_info['uid'], $dynamic_id, $answer_id);
 		return $this->afterDatafomat($result);
 	}
 	
@@ -531,17 +607,226 @@ class StudyApp extends Controller
 		if (!empty($re_info['errCode']))
 			return $re_info;
 		
-		$result = $model->delDynamic($re_info['uid'],$dynamic_id);
+		$result = $model->delDynamic($re_info['uid'], $dynamic_id);
 		return $this->afterDatafomat($result);
 	}
 	
-	//TODO::增加自定义课表部分
+	/**
+	 * @param $session
+	 * @param null $xn
+	 * @param null $xq
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function getUserAllCourse($session, $xn = null, $xq = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
+		
+		$result = $model->getUserAllCourse($re_info['uid'], $xn, $xq);
+		return $this->afterDatafomat($result);
+	}
+	
+	public function addUserCustomCourse($session, $xn = null, $xq = null, $class_name, $time, $week, $teacher, $type, $location)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
+		
+		$result = $model->addUserCustomCourse($re_info['uid'], $xn, $xq, $class_name, $time, $week, $teacher, $type, $location);
+		return $this->afterDatafomat($result);
+	}
+	
+	public function delUserCustomCourse($session, $xn = null, $xq = null, $class_name, $time, $week)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
+		
+		$result = $model->delUserCustomCourse($re_info['uid'], $xn, $xq, $class_name, $time, $week);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * @param $session
+	 * @param null $xn
+	 * @param null $xq
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function getUserCustomCourse($session, $xn = null, $xq = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		if ($xn == null) {
+			$term = \app\xaufe\model\EduSys::getCurrentTerm();
+			$xn = $term['xn'];
+			$xq = $term['xq'];
+		}
+		
+		$result = $model->getUserCustomCourse($re_info['uid'], $xn, $xq);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * ###########
+	 * 自习部分
+	 */
+	
+	/**
+	 * @param $session
+	 * @param $place
+	 * @param $date
+	 * @param null $time
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\BindParamException
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 */
+	public function getClassList($session, $place, $date, $time = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->getClassList($place, $date, $time);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * @param $session
+	 * @param null $other_uid
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\BindParamException
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 * @throws \think\exception\PDOException
+	 */
+	public function getStudyList($session, $other_uid = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result = $model->getStudyList($re_info['uid']);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * @param $session
+	 * @param $study_time
+	 * @param $study_date
+	 * @param null $require
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function searchStudyPartner($session, $study_time, $study_date, $require = null)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result= $model->searchStudyPartner($re_info['uid'], $study_time, $study_date, $require = null);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * @param $session
+	 * @param $reach_uid
+	 * @param $study_content
+	 * @param $msg
+	 * @param $place
+	 * @param $study_time
+	 * @param $study_date
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function launchStudy($session, $reach_uid, $study_content, $msg, $place, $study_time, $study_date)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result= $model->launchStudy($re_info['uid'], $reach_uid, $study_content, $msg, $place, $study_time, $study_date);
+		return $this->afterDatafomat($result);
+	}
+	
+	/**
+	 * @param $session
+	 * @param $study_id
+	 * @param $msg
+	 * @param $status
+	 * @return array
+	 * @throws \think\Exception
+	 * @throws \think\db\exception\DataNotFoundException
+	 * @throws \think\db\exception\ModelNotFoundException
+	 * @throws \think\exception\DbException
+	 */
+	public function acceptStudy($session, $study_id, $msg, $status)
+	{
+		$model = new StudyAppModel();
+		$re_info = $model->checkSession($session);
+		if (!empty($re_info['errCode']))
+			return $re_info;
+		
+		$result= $model->acceptStudy($re_info['uid'],$study_id, $msg, $status);
+		return $this->afterDatafomat($result);
+	}
+	
+	
+	//ok::增加自定义课表部分
 	//TODO::用户自定义信息部分，个性签名，用户认证， 展示已经学习xx次  （关注人，被关注人...）
 	//TODO::增加用户StudyScore积分部分，增加积分，查看积分信息
 	//TODO::增加用户设置部分，隐私问题（是否展示成绩（80分以上的成绩），是否能让别人看到自己所在的班级，及个人信息）、是否接受学习邀请
 	//TODO::群排行，获取群id，群id内的所有好友
 	//TODO::增加匹配模型，匹配算法，发起预约请求，接受预约请求，成功预约提示 ，学习记录    可以约一个人，也可也约多个人   （定位验证地点，结束验证地点，完成本次自习）
-	//TODO::增加社区问答部分，拉取消息，对比消息是否更新，发表问答，回复问答，查看已发布主题，删除主题，删除回复
+	//OK::增加社区问答部分，拉取消息，对比消息是否更新，发表问答，回复问答，查看已发布主题，删除主题，删除回复
 	//TODO::增加时间胶囊部分 添加胶囊，删除胶囊，胶囊倒计时提醒
 	//TODO::增加番茄计划部分 添加计划，减少计划
 	

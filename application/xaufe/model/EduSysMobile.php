@@ -143,7 +143,7 @@ data;
 					"time" => $time,
 					"week" => $week,
 					"teacher" => $teacher,
-					"type" => 0,
+					"type" => 1,
 					"location" => $location
 				];
 			}
